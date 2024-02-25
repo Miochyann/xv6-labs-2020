@@ -150,6 +150,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->trace_mask = 0;
 }
 
 // Create a user page table for a given process,
@@ -292,6 +293,8 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
+
+  np->trace_mask = p->trace_mask;
 
   np->state = RUNNABLE;
 
@@ -487,6 +490,20 @@ scheduler(void)
       intr_on();
       asm volatile("wfi");
     }
+  }
+}
+
+// 获得进程数
+void
+getpnum(uint64 *dst){
+  *dst = 0;
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state != UNUSED) {
+      (*dst)++;
+    }
+    release(&p->lock);
   }
 }
 
