@@ -260,7 +260,7 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-
+  u2kvmcopy(p->pagetable, p->kernel_ptb, 0, p->sz);
   release(&p->lock);
 }
 
@@ -274,9 +274,13 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
+    if (PGROUNDUP(sz + n) >= PLIC){
+      return -1;
+    }
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+    u2kvmcopy(p->pagetable, p->kernel_ptb, p->sz, sz);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -325,6 +329,9 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
+
+  // 复制一份
+  u2kvmcopy(np->pagetable, np->kernel_ptb, 0, np->sz);
 
   release(&np->lock);
 
